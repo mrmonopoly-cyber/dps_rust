@@ -37,26 +37,29 @@ BU_: MASTER SLAVE
 BO_ 650 DpsSlaveMex: 8 SLAVE
  SG_ board_id : 0|4@1+ (1,0) [0|15] "slave board id" MASTER
  SG_ Mode M : 4|4@1+ (1,0) [0|15] "slave mex type" MASTER
- SG_ id m0M : 8|4@1+ (1,0) [0|15] "slave board id" MASTER
- SG_ boardName m0M : 12|52@1+ (1,0) [0|0] "slave board name" MASTER
- SG_ infoVarId m1M : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
- SG_ varName m1M : 16|48@1+ (1,0) [0|0] "slave var name" MASTER
- SG_ valueVarId m2M : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
- SG_ type m2M : 12|2@1+ (1,0) [0|2] "slave var type" MASTER
- SG_ size m2M : 14|2@1+ (1,0) [0|2] "slave var size" MASTER
- SG_ varId m3M : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
- SG_ value m3M : 16|32@1+ (1,0) [0|2] "slave var value" MASTER
+ SG_ boardName m0 : 12|52@1+ (1,0) [0|0] "slave board name" MASTER
+ SG_ infoVarId m1 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
+ SG_ varName m1 : 16|48@1+ (1,0) [0|0] "slave var name" MASTER
+ SG_ valueVarId m2 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
+ SG_ type m2 : 12|2@1+ (1,0) [0|2] "slave var type" MASTER
+ SG_ size m2 : 14|2@1+ (1,0) [0|2] "slave var size" MASTER
+ SG_ varId m3 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
+ SG_ value m3 : 16|32@1+ (1,0) [0|2] "slave var value" MASTER
 
 BO_ 651 DpsMasterMex: 8 MASTER
  SG_ Mode M : 0|4@1+ (1,0) [0|15] "slave mex type" SLAVE
- SG_ varName_boardId m1M : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varMetadataBoardId m2M : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varMetadataVarId m2M : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
- SG_ varValue_boardId m3M : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varValue_var_id m3M : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
+ SG_ reserved m0 : 4|4@1+ (1,0) [0|15] "" SLAVE
+ SG_ varName_boardId m1 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
+ SG_ varMetadataBoardId m2 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
+ SG_ varMetadataVarId m2 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
+ SG_ varValue_boardId m3 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
+ SG_ varValue_var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
+ SG_ updateVarValue_boardId m4 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
+ SG_ updateVarValue_var_id m4 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
+ SG_ updateVarValue_varValue m4 : 12|32@1+ (1,0) [0|15] "new slave var value" SLAVE
 
 
-VAL_ 650 type 0 "Integer" 1 "Float" 2 "String";
+VAL_ 650 type 0 "Integer" 1 "Float";
 VAL_ 650 size 0 "8Bit" 1 "16Bit" 2 "32Bit";
 
 

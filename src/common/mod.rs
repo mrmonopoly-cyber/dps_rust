@@ -1,5 +1,7 @@
 use core::usize;
 
+use self::messages::CanError;
+
 pub mod messages;
 
 pub const BOARD_NAME_LENGTH : usize  =7;
@@ -31,4 +33,4 @@ pub struct CanMessage<'a>{
     pub payload: &'a[u8],
 }
 
-pub type SendFn = fn(&CanMessage) -> Result<(),()>;
+pub type SendFn = fn(&CanMessage) -> Result<(),CanError>;
