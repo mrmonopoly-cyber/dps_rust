@@ -5,12 +5,6 @@ use core::result::Result;
 use crate::common::messages::*;
 use crate::common::*;
 
-// char name[VAR_NAME_LENGTH];
-// uint32_t value;
-// uint8_t size;
-// enum DATA_GENERIC_TYPE type:2;
-// uint8_t updated : 1;
-
 #[derive(Debug, Clone, Copy)]
 pub struct VarRecord {
     id: u8,
