@@ -8,7 +8,7 @@ use crate::common::*;
 #[derive(Debug, Clone, Copy)]
 pub struct VarRecord {
     id: u8,
-    name: [u8;VAR_NAME_LENGTH],
+    name: [u8; VAR_NAME_LENGTH],
     value: [u8; 4],
     size: u8,
     data_type: DataGenericType,
@@ -22,7 +22,7 @@ struct MasterRecord {
 }
 
 #[derive(Debug)]
-pub struct DpsMaster{
+pub struct DpsMaster {
     master_id: u16,
     slaves_id: u16,
     send_f: SendFn,
@@ -208,10 +208,7 @@ impl DpsMaster {
         dps_slave_mex_mode_m0: &DpsSlaveMexModeM0,
     ) -> Result<bool, CanError> {
         let arr = dps_slave_mex_mode_m0.board_name().to_ne_bytes();
-        if self.board_vec
-            .iter_mut()
-            .any(|b| b.id == board_id)
-        {
+        if self.board_vec.iter_mut().any(|b| b.id == board_id) {
             return Ok(false);
         }
 
@@ -232,28 +229,24 @@ impl DpsMaster {
     ) -> Result<bool, CanError> {
         let var_id = dps_slave_mex_mode_m1.info_var_id();
         let var_name_arr = dps_slave_mex_mode_m1.var_name().to_le_bytes();
-        let board =self.board_vec.iter_mut()
-            .find(|b| b.id==board_id);
+        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
         match board {
-            Some(board) => 
-            {
-                let var = board.vars
-                    .iter_mut()
-                    .find(|v| v.id == var_id);
+            Some(board) => {
+                let var = board.vars.iter_mut().find(|v| v.id == var_id);
                 if var.is_none() {
-                    board.vars.push(VarRecord{
+                    board.vars.push(VarRecord {
                         id: var_id,
-                        name: var_name_arr[0..VAR_NAME_LENGTH].try_into().unwrap() ,
-                        value: [0;4],
+                        name: var_name_arr[0..VAR_NAME_LENGTH].try_into().unwrap(),
+                        value: [0; 4],
                         data_type: DataGenericType::Unsigned,
                         size: 0,
                     });
-                }else  {
+                } else {
                     let var = var.unwrap();
                     var.name = var_name_arr[0..VAR_NAME_LENGTH].try_into().unwrap();
                 }
                 Ok(true)
-            },
+            }
             None => Ok(false),
         }
     }
@@ -263,48 +256,43 @@ impl DpsMaster {
         board_id: u8,
         dps_slave_mex_mode_m2: &DpsSlaveMexModeM2,
     ) -> Result<bool, CanError> {
-        let var_type = match dps_slave_mex_mode_m2.value_var_type() 
-        {
-            DpsSlaveMexValueVarType::UnsignedInteger=> DataGenericType::Unsigned,
-            DpsSlaveMexValueVarType::SignedInteger=> DataGenericType::Signed,
+        let var_type = match dps_slave_mex_mode_m2.value_var_type() {
+            DpsSlaveMexValueVarType::UnsignedInteger => DataGenericType::Unsigned,
+            DpsSlaveMexValueVarType::SignedInteger => DataGenericType::Signed,
             DpsSlaveMexValueVarType::Float => DataGenericType::Floated,
             DpsSlaveMexValueVarType::_Other(_) => DataGenericType::Unsigned,
         };
 
-        let var_size = match dps_slave_mex_mode_m2.value_var_size()
-        {
+        let var_size = match dps_slave_mex_mode_m2.value_var_size() {
             DpsSlaveMexValueVarSize::X8bit => 1,
             DpsSlaveMexValueVarSize::X16bit => 2,
             DpsSlaveMexValueVarSize::X32bit => 4,
             DpsSlaveMexValueVarSize::_Other(_) => 1,
         };
 
-
         let var_id = dps_slave_mex_mode_m2.value_var_id();
-        let board =self.board_vec.iter_mut().find(|b| b.id==board_id);
+        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
         match board {
-            Some(board) => 
-            {
+            Some(board) => {
                 let var = board.vars.iter_mut().find(|v| v.id == var_id);
                 match var {
-                    Some(var) => 
-                    {
+                    Some(var) => {
                         var.data_type = var_type;
                         var.size = var_size;
                         Ok(true)
-                    },
+                    }
                     None => {
-                        board.vars.push(VarRecord{
+                        board.vars.push(VarRecord {
                             id: var_id,
-                            name: [0;VAR_NAME_LENGTH],
-                            value: [0;4],
+                            name: [0; VAR_NAME_LENGTH],
+                            value: [0; 4],
                             data_type: var_type,
                             size: var_size,
                         });
                         Ok(true)
-                    },
+                    }
                 }
-            },
+            }
             None => Ok(false),
         }
     }
@@ -315,25 +303,21 @@ impl DpsMaster {
         dps_slave_mex_mode_m3: &DpsSlaveMexModeM3,
     ) -> Result<bool, CanError> {
         let var_id = dps_slave_mex_mode_m3.var_id();
-        let board =self.board_vec.iter_mut().find(|b| b.id==board_id);
+        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
 
-        match board 
-        {
+        match board {
             None => Ok(false),
-            Some(board) => 
-            {
+            Some(board) => {
                 let var = board.vars.iter_mut().find(|v| v.id == var_id);
-                match var
-                {
+                match var {
                     None => (),
-                    Some(var) => 
-                    {
+                    Some(var) => {
                         let arr = dps_slave_mex_mode_m3.value().to_le_bytes();
                         var.value = arr.try_into().unwrap();
-                    },
+                    }
                 }
                 Ok(true)
-            },
+            }
         }
     }
 
