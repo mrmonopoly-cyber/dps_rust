@@ -1,5 +1,3 @@
-use core::usize;
-
 use self::messages::CanError;
 
 pub mod messages;
@@ -8,7 +6,7 @@ pub const BOARD_NAME_LENGTH : usize  =7;
 pub const VAR_NAME_LENGTH : usize= 6;
 pub const CAN_PAYLOAD_MAX_SIZE_CAN_BASE : usize = 8;
 
-#[derive(Debug)]
+#[derive(Debug,Clone, Copy)]
 pub enum DataGenericType {
     Unsigned = 0,
     Signed = 1,

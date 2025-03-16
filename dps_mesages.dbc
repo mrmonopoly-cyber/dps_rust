@@ -47,16 +47,16 @@ BO_ 650 DpsSlaveMex: 8 SLAVE
  SG_ value m3 : 16|32@1+ (1,0) [0|2] "slave var value" MASTER
 
 BO_ 651 DpsMasterMex: 8 MASTER
- SG_ Mode M : 0|4@1+ (1,0) [0|15] "slave mex type" SLAVE
+ SG_ Mode M : 0|4@1+ (1,0) [0|15] "master mex type" SLAVE
  SG_ reserved m0 : 4|4@1+ (1,0) [0|15] "" SLAVE
- SG_ varName_boardId m1 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varMetadataBoardId m2 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varMetadataVarId m2 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
- SG_ varValue_boardId m3 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ varValue_var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
- SG_ updateVarValue_boardId m4 : 4|4@1+ (1,0) [0|15] "slave board id" SLAVE
- SG_ updateVarValue_var_id m4 : 8|4@1+ (1,0) [0|15] "slave var id" SLAVE
- SG_ updateVarValue_varValue m4 : 12|32@1+ (1,0) [0|15] "new slave var value" SLAVE
+ SG_ varName_boardId m1 : 4|4@1+ (1,0) [0|15] "master board id" SLAVE
+ SG_ varMetadataBoardId m2 : 4|4@1+ (1,0) [0|15] "master board id" SLAVE
+ SG_ varMetadataVarId m2 : 8|4@1+ (1,0) [0|15] "master var id" SLAVE
+ SG_ varValue_boardId m3 : 4|4@1+ (1,0) [0|15] "master board id" SLAVE
+ SG_ varValue_var_id m3 : 8|4@1+ (1,0) [0|15] "master var id" SLAVE
+ SG_ updateVarValue_boardId m4 : 4|4@1+ (1,0) [0|15] "master board id" SLAVE
+ SG_ updateVarValue_var_id m4 : 8|4@1+ (1,0) [0|15] "master var id" SLAVE
+ SG_ updateVarValue_varValue m4 : 12|32@1+ (1,0) [0|15] "new master var value" SLAVE
 
 
 VAL_ 650 type 0 "Integer" 1 "Float";
