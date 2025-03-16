@@ -41,8 +41,8 @@ BO_ 650 DpsSlaveMex: 8 SLAVE
  SG_ infoVarId m1 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
  SG_ varName m1 : 16|48@1+ (1,0) [0|0] "slave var name" MASTER
  SG_ valueVarId m2 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
- SG_ type m2 : 12|2@1+ (1,0) [0|2] "slave var type" MASTER
- SG_ size m2 : 14|2@1+ (1,0) [0|2] "slave var size" MASTER
+ SG_ valueVarType m2 : 12|2@1+ (1,0) [0|2] "slave var type" MASTER
+ SG_ valueVarSize m2 : 14|2@1+ (1,0) [0|2] "slave var size" MASTER
  SG_ varId m3 : 8|4@1+ (1,0) [0|15] "slave var id" MASTER
  SG_ value m3 : 16|32@1+ (1,0) [0|2] "slave var value" MASTER
 
@@ -59,16 +59,16 @@ BO_ 651 DpsMasterMex: 8 MASTER
  SG_ updateVarValue_varValue m4 : 12|32@1+ (1,0) [0|15] "new master var value" SLAVE
 
 
-VAL_ 650 type 0 "Integer" 1 "Float";
-VAL_ 650 size 0 "8Bit" 1 "16Bit" 2 "32Bit";
+VAL_ 650 valueVarType 0 "SignedInteger" 1 "UnsignedInteger" 2 "Float";
+VAL_ 650 valueVarSize 0 "8Bit" 1 "16Bit" 2 "32Bit";
 
 
 SG_MUL_VAL_ 650 id Mode 0-0;
 SG_MUL_VAL_ 650 boardName Mode 0-0;
 SG_MUL_VAL_ 650 varId Mode 3-3;
 SG_MUL_VAL_ 650 varName Mode 1-1;
-SG_MUL_VAL_ 650 type Mode 2-2;
-SG_MUL_VAL_ 650 size Mode 2-2;
+SG_MUL_VAL_ 650 valueVarType Mode 2-2;
+SG_MUL_VAL_ 650 valueVarSize Mode 2-2;
 SG_MUL_VAL_ 650 value Mode 3-3;
 SG_MUL_VAL_ 651 reserved Mode 0-0;
 SG_MUL_VAL_ 651 Mode None 0-0;

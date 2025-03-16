@@ -62,10 +62,10 @@ impl DpsSlaveMex {
     pub const VAR_NAME_MAX: u64 = 0_u64;
     pub const VALUE_VAR_ID_MIN: u8 = 0_u8;
     pub const VALUE_VAR_ID_MAX: u8 = 15_u8;
-    pub const XTYPE_MIN: u8 = 0_u8;
-    pub const XTYPE_MAX: u8 = 2_u8;
-    pub const SIZE_MIN: u8 = 0_u8;
-    pub const SIZE_MAX: u8 = 2_u8;
+    pub const VALUE_VAR_TYPE_MIN: u8 = 0_u8;
+    pub const VALUE_VAR_TYPE_MAX: u8 = 2_u8;
+    pub const VALUE_VAR_SIZE_MIN: u8 = 0_u8;
+    pub const VALUE_VAR_SIZE_MAX: u8 = 2_u8;
     pub const VAR_ID_MIN: u8 = 0_u8;
     pub const VAR_ID_MAX: u8 = 15_u8;
     pub const VALUE_MIN: u32 = 0_u32;
@@ -231,42 +231,44 @@ impl<'a> Arbitrary<'a> for DpsSlaveMex {
         DpsSlaveMex::new(board_id,mode).map_err(|_| arbitrary::Error::IncorrectFormat)
     }
 }
-/// Defined values for type
+/// Defined values for valueVarType
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsSlaveMexType {
-    Integer,
+pub enum DpsSlaveMexValueVarType {
+    SignedInteger,
+    UnsignedInteger,
     Float,
     _Other(u8),
 }
 
-impl From<DpsSlaveMexType> for u8 {
-    fn from(val: DpsSlaveMexType) -> u8 {
+impl From<DpsSlaveMexValueVarType> for u8 {
+    fn from(val: DpsSlaveMexValueVarType) -> u8 {
         match val {
-            DpsSlaveMexType::Integer => 0,
-            DpsSlaveMexType::Float => 1,
-            DpsSlaveMexType::_Other(x) => x,
+            DpsSlaveMexValueVarType::SignedInteger => 0,
+            DpsSlaveMexValueVarType::UnsignedInteger => 1,
+            DpsSlaveMexValueVarType::Float => 2,
+            DpsSlaveMexValueVarType::_Other(x) => x,
         }
     }
 }
 
-/// Defined values for size
+/// Defined values for valueVarSize
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsSlaveMexSize {
+pub enum DpsSlaveMexValueVarSize {
     X8bit,
     X16bit,
     X32bit,
     _Other(u8),
 }
 
-impl From<DpsSlaveMexSize> for u8 {
-    fn from(val: DpsSlaveMexSize) -> u8 {
+impl From<DpsSlaveMexValueVarSize> for u8 {
+    fn from(val: DpsSlaveMexValueVarSize) -> u8 {
         match val {
-            DpsSlaveMexSize::X8bit => 0,
-            DpsSlaveMexSize::X16bit => 1,
-            DpsSlaveMexSize::X32bit => 2,
-            DpsSlaveMexSize::_Other(x) => x,
+            DpsSlaveMexValueVarSize::X8bit => 0,
+            DpsSlaveMexValueVarSize::X16bit => 1,
+            DpsSlaveMexValueVarSize::X32bit => 2,
+            DpsSlaveMexValueVarSize::_Other(x) => x,
         }
     }
 }
@@ -450,24 +452,25 @@ pub fn set_value_var_id(&mut self, value: u8) -> Result<(), CanError> {
     Ok(())
 }
 
-/// type
+/// valueVarType
 ///
 /// - Min: 0
 /// - Max: 2
 /// - Unit: "slave var type"
 /// - Receivers: MASTER
 #[inline(always)]
-pub fn xtype(&self) -> DpsSlaveMexType {
+pub fn value_var_type(&self) -> DpsSlaveMexValueVarType {
     let signal = self.raw.view_bits::<Lsb0>()[12..14].load_le::<u8>();
     
     match signal {
-        0 => DpsSlaveMexType::Integer,
-        1 => DpsSlaveMexType::Float,
-        _ => DpsSlaveMexType::_Other(self.xtype_raw()),
+        0 => DpsSlaveMexValueVarType::SignedInteger,
+        1 => DpsSlaveMexValueVarType::UnsignedInteger,
+        2 => DpsSlaveMexValueVarType::Float,
+        _ => DpsSlaveMexValueVarType::_Other(self.value_var_type_raw()),
     }
 }
 
-/// Get raw value of type
+/// Get raw value of valueVarType
 ///
 /// - Start bit: 12
 /// - Signal size: 2 bits
@@ -476,15 +479,15 @@ pub fn xtype(&self) -> DpsSlaveMexType {
 /// - Byte order: LittleEndian
 /// - Value type: Unsigned
 #[inline(always)]
-pub fn xtype_raw(&self) -> u8 {
+pub fn value_var_type_raw(&self) -> u8 {
     let signal = self.raw.view_bits::<Lsb0>()[12..14].load_le::<u8>();
     
     signal
 }
 
-/// Set value of type
+/// Set value of valueVarType
 #[inline(always)]
-pub fn set_xtype(&mut self, value: u8) -> Result<(), CanError> {
+pub fn set_value_var_type(&mut self, value: u8) -> Result<(), CanError> {
     #[cfg(feature = "range_checked")]
     if value < 0_u8 || 2_u8 < value {
         return Err(CanError::ParameterOutOfRange { message_id: 650 });
@@ -493,25 +496,25 @@ pub fn set_xtype(&mut self, value: u8) -> Result<(), CanError> {
     Ok(())
 }
 
-/// size
+/// valueVarSize
 ///
 /// - Min: 0
 /// - Max: 2
 /// - Unit: "slave var size"
 /// - Receivers: MASTER
 #[inline(always)]
-pub fn size(&self) -> DpsSlaveMexSize {
+pub fn value_var_size(&self) -> DpsSlaveMexValueVarSize {
     let signal = self.raw.view_bits::<Lsb0>()[14..16].load_le::<u8>();
     
     match signal {
-        0 => DpsSlaveMexSize::X8bit,
-        1 => DpsSlaveMexSize::X16bit,
-        2 => DpsSlaveMexSize::X32bit,
-        _ => DpsSlaveMexSize::_Other(self.size_raw()),
+        0 => DpsSlaveMexValueVarSize::X8bit,
+        1 => DpsSlaveMexValueVarSize::X16bit,
+        2 => DpsSlaveMexValueVarSize::X32bit,
+        _ => DpsSlaveMexValueVarSize::_Other(self.value_var_size_raw()),
     }
 }
 
-/// Get raw value of size
+/// Get raw value of valueVarSize
 ///
 /// - Start bit: 14
 /// - Signal size: 2 bits
@@ -520,15 +523,15 @@ pub fn size(&self) -> DpsSlaveMexSize {
 /// - Byte order: LittleEndian
 /// - Value type: Unsigned
 #[inline(always)]
-pub fn size_raw(&self) -> u8 {
+pub fn value_var_size_raw(&self) -> u8 {
     let signal = self.raw.view_bits::<Lsb0>()[14..16].load_le::<u8>();
     
     signal
 }
 
-/// Set value of size
+/// Set value of valueVarSize
 #[inline(always)]
-pub fn set_size(&mut self, value: u8) -> Result<(), CanError> {
+pub fn set_value_var_size(&mut self, value: u8) -> Result<(), CanError> {
     #[cfg(feature = "range_checked")]
     if value < 0_u8 || 2_u8 < value {
         return Err(CanError::ParameterOutOfRange { message_id: 650 });
@@ -852,7 +855,7 @@ pub fn new() -> Self { Self { raw: [0u8; 8] } }
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave board id"
+/// - Unit: "master board id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn var_name_board_id(&self) -> u8 {
@@ -897,7 +900,7 @@ pub fn new() -> Self { Self { raw: [0u8; 8] } }
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave board id"
+/// - Unit: "master board id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn var_metadata_board_id(&self) -> u8 {
@@ -934,7 +937,7 @@ pub fn set_var_metadata_board_id(&mut self, value: u8) -> Result<(), CanError> {
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave var id"
+/// - Unit: "master var id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn var_metadata_var_id(&self) -> u8 {
@@ -979,7 +982,7 @@ pub fn new() -> Self { Self { raw: [0u8; 8] } }
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave board id"
+/// - Unit: "master board id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn var_value_board_id(&self) -> u8 {
@@ -1016,7 +1019,7 @@ pub fn set_var_value_board_id(&mut self, value: u8) -> Result<(), CanError> {
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave var id"
+/// - Unit: "master var id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn var_value_var_id(&self) -> u8 {
@@ -1061,7 +1064,7 @@ pub fn new() -> Self { Self { raw: [0u8; 8] } }
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave board id"
+/// - Unit: "master board id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn update_var_value_board_id(&self) -> u8 {
@@ -1098,7 +1101,7 @@ pub fn set_update_var_value_board_id(&mut self, value: u8) -> Result<(), CanErro
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "slave var id"
+/// - Unit: "master var id"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn update_var_value_var_id(&self) -> u8 {
@@ -1135,7 +1138,7 @@ pub fn set_update_var_value_var_id(&mut self, value: u8) -> Result<(), CanError>
 ///
 /// - Min: 0
 /// - Max: 15
-/// - Unit: "new slave var value"
+/// - Unit: "new master var value"
 /// - Receivers: SLAVE
 #[inline(always)]
 pub fn update_var_value_var_value(&self) -> u32 {
