@@ -1,10 +1,13 @@
-use core::mem::size_of;
+use core::fmt::Debug;
 use crate::common::DataGenericType::*;
 
-pub trait DpsType: PartialOrd + Sized {
+pub trait DpsType : Debug 
+{
     fn get_type_category(&self) -> crate::common::DataGenericType {
         crate::common::DataGenericType::Unsigned
     }
+
+    fn get_type_size(&self) -> usize;
 
     fn update(&mut self, data: &[u8]) -> Result<(), &str>;
 }
@@ -15,6 +18,12 @@ macro_rules! impl_dps_data_type {
             fn get_type_category(&self) -> crate::common::DataGenericType {
                 $te
             }
+
+            fn get_type_size(&self) -> usize
+            {
+                size_of::<u8>()
+            }
+
             fn update(&mut self, data: &[u8]) -> Result<(), &str> {
                 if data.len() ==  size_of::<$t>(){
                     let mut new_v = self.to_be_bytes();
