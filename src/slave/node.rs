@@ -66,6 +66,9 @@ impl<'a> DpsSlave<'a> {
         var: &'a mut dyn DpsType,
         post_update_f: PostUpdateFn<'a>,
     ) -> Result<(), &'a str> {
+        if !self.enable {
+            return Err("dps is disable");
+        }
         if var_name.len() > VAR_NAME_LENGTH {
             return Err("var name string too long ");
         }
@@ -89,17 +92,24 @@ impl<'a> DpsSlave<'a> {
         Ok(())
     }
 
-    pub fn check_can_mex_recv(&'a mut self, mex: &CanMessage) -> Result<(), CanError> {
+    pub fn check_can_mex_recv(&'a mut self, mex: &CanMessage) -> Result<(), &'a str> {
+        if !self.enable {
+            return Err("dps is disable");
+        }
         if !self.enable {
             return Ok(());
         };
         if mex.id != self.master_id {
-            return Err(messages::CanError::UnknownMessageId(mex.id.into()));
+            return Err("not right master id");
         }
 
-        let mut master_mex = DpsMasterMex::try_from(mex.payload)?;
+        let mut master_mex = DpsMasterMex::try_from(mex.payload)
+            .map_err(|_| "invalid master mex payload")?;
 
-        match master_mex.mode()? {
+        let mode = master_mex.mode()
+            .map_err(|_| "invalid master mex mode")?;
+
+        match mode{
             DpsMasterMexMode::M0(_) => self._discover_board(),
             DpsMasterMexMode::M1(mex_mode_1) => self._request_info(&mex_mode_1),
             DpsMasterMexMode::M2(mex_mode_2) => self._request_var_metadata(&mex_mode_2),
@@ -110,71 +120,72 @@ impl<'a> DpsSlave<'a> {
 
     //private
 
-    fn _update_var_value(&'a mut self, master_mex: &DpsMasterMexModeM4) -> Result<(), CanError> {
+    fn _update_var_value(&'a mut self, master_mex: &DpsMasterMexModeM4) -> Result<(), &'a str> {
         let val_slice = master_mex.update_var_value_var_value().to_le_bytes();
 
         if self.board_id != master_mex.update_var_value_board_id() {
             return Ok(());
         }
 
-        let var = self
-            .vars
+        let var = self.vars
             .iter_mut()
             .find(|x| x.var_id == master_mex.update_var_value_var_id());
 
-        match var {
-            Some(var) => {
+        match var 
+        {
+            Some(var) => 
+            {
                 let _ = var.ref_var.update(&val_slice);
                 (var.post_update_f)(var.var_name, var.ref_var);
                 Ok(())
-            }
-
-            None => Err(CanError::ParameterOutOfRange {
-                message_id: u32::from(master_mex.update_var_value_var_id()),
-            }),
+            },
+            None => Err("variable not found"),
         }
     }
 
 
 
-    fn _request_var_value(&self, master_mex: &DpsMasterMexModeM3) -> Result<(), CanError> {
-        let mut slave_mex = DpsSlaveMex::new(self.board_id, 3)?;
-        let mut slave_mex_mode_3 = DpsSlaveMexModeM3::new();
-
+    fn _request_var_value(&self, master_mex: &DpsMasterMexModeM3) -> Result<(), &'a str> {
         if self.board_id != master_mex.var_value_board_id() {
             return Ok(());
         }
+
+        let mut slave_mex = DpsSlaveMex::new(self.board_id, 3).ok().unwrap();
+        let mut slave_mex_mode_3 = DpsSlaveMexModeM3::new();
+
         self.vars
             .iter()
             .find(|x| x.var_id == master_mex.var_value_var_id())
             .inspect(|x| {
                 let var_value: u32 = 42;
-                let _ = slave_mex_mode_3.set_var_id(x.var_id);
-                let _ = slave_mex_mode_3.set_value(var_value);
-                let _ = slave_mex.set_m3(slave_mex_mode_3);
+                slave_mex_mode_3.set_var_id(x.var_id).ok().unwrap();
+                slave_mex_mode_3.set_value(var_value).ok().unwrap();
+                slave_mex.set_m3(slave_mex_mode_3).ok().unwrap();
             });
         let raw_mex = CanMessage {
             id: self.slave_id,
             payload: slave_mex.raw(),
         };
         (self.send_f)(&raw_mex)
+            .map_err(|_| "failed send message for request var value")
     }
 
-    fn _request_var_metadata(&self, master_mex: &DpsMasterMexModeM2) -> Result<(), CanError> {
+    fn _request_var_metadata(&self, master_mex: &DpsMasterMexModeM2) -> Result<(), &'a str> {
         if self.board_id != master_mex.var_metadata_board_id() {
             return Ok(());
         }
 
         for var in self.vars.iter() {
-            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1)?;
+            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
             let mut slave_mode_2 = DpsSlaveMexModeM2::new();
-            slave_mode_2.set_value_var_id(var.var_id)?;
-            slave_mode_2.set_value_var_size(var.ref_var.get_type_size().try_into().unwrap())?;
+            slave_mode_2.set_value_var_id(var.var_id).ok().unwrap();
+            slave_mode_2.set_value_var_size(var.ref_var.get_type_size().try_into().unwrap())
+                .ok().unwrap();
             match var.ref_var.get_type_category(){
-                Unsigned | Signed => slave_mode_2.set_value_var_type(0)?,
-                Floated => slave_mode_2.set_value_var_type(1)?,
+                Unsigned | Signed => slave_mode_2.set_value_var_type(0).ok().unwrap(),
+                Floated => slave_mode_2.set_value_var_type(1).ok().unwrap(),
             };
-            slave_mex.set_m2(slave_mode_2)?;
+            slave_mex.set_m2(slave_mode_2).ok().unwrap();
             let raw_mex = CanMessage {
                 id: self.slave_id,
                 payload: slave_mex.raw(),
@@ -187,17 +198,17 @@ impl<'a> DpsSlave<'a> {
         Ok(())
     }
 
-    fn _request_info(&self, master_mex: &DpsMasterMexModeM1) -> Result<(), CanError> {
+    fn _request_info(&self, master_mex: &DpsMasterMexModeM1) -> Result<(), &'a str> {
         if self.board_id != master_mex.var_name_board_id() {
             return Ok(());
         }
 
         for var in self.vars.iter() {
-            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1)?;
+            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
             let mut slave_mode_1 = DpsSlaveMexModeM1::new();
-            slave_mode_1.set_info_var_id(var.var_id)?;
-            slave_mode_1.set_var_name(str::parse(var.var_name).unwrap())?;
-            slave_mex.set_m1(slave_mode_1)?;
+            slave_mode_1.set_info_var_id(var.var_id).ok().unwrap();
+            slave_mode_1.set_var_name(str::parse(var.var_name).unwrap()).ok().unwrap();
+            slave_mex.set_m1(slave_mode_1).ok().unwrap();
             let raw_mex = CanMessage {
                 id: self.slave_id,
                 payload: slave_mex.raw(),
@@ -211,17 +222,26 @@ impl<'a> DpsSlave<'a> {
         Ok(())
     }
 
-    fn _discover_board(&self) -> Result<(), CanError> {
-        let mut slave_mex = DpsSlaveMex::new(self.board_id, 0)?;
+    fn _discover_board(&self) -> Result<(), &'a str> {
+        let mut slave_mex = DpsSlaveMex::new(self.board_id, 0).ok().unwrap();
         let mut slave_mode_0 = DpsSlaveMexModeM0::new();
-        slave_mode_0.set_board_name(str::parse(self.board_name).unwrap())?;
-        slave_mex.set_m0(slave_mode_0)?;
+        slave_mode_0.set_board_name(str::parse(self.board_name).unwrap()).ok().unwrap();
+        slave_mex.set_m0(slave_mode_0).ok().unwrap();
 
         let raw_mex = CanMessage {
             id: self.slave_id,
             payload: slave_mex.raw(),
         };
 
-        (self.send_f)(&raw_mex)
+        let mut tries = 0;
+        while (self.send_f)(&raw_mex).is_err() && tries < 32
+        {
+            tries+=1;
+        }
+
+        match tries{
+            32 => Err("failed to send discover board response"),
+            _ => Ok(())
+        }
     }
 }

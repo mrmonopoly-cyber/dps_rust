@@ -310,7 +310,7 @@ impl DpsMaster {
                     None => (),
                     Some(var) => {
                         let arr = dps_slave_mex_mode_m3.value().to_le_bytes();
-                        var.value = arr.try_into().unwrap();
+                        var.value = arr;
                     }
                 }
                 Ok(true)
