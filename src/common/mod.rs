@@ -1,6 +1,7 @@
 use self::messages::CanError;
 
 pub mod messages;
+pub mod types;
 
 pub const BOARD_NAME_LENGTH : usize  =7;
 pub const VAR_NAME_LENGTH : usize= 6;

@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::common::messages::*;
+use crate::common::types::DpsType;
 use crate::common::*;
 
 use DataGenericType::*;
@@ -57,6 +58,10 @@ impl<'a> DpsSlave<'a> {
 
     pub fn disable(&mut self) {
         self.enable = true
+    }
+
+    pub fn monitor_var(&mut self, var: impl DpsType) {
+        
     }
 
     pub fn monitor_primitive_var<T>(
