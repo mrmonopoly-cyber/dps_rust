@@ -173,11 +173,11 @@ impl<'a> DpsSlave<'a> {
             let mut slave_mex = DpsSlaveMex::new(self.board_id, 1)?;
             let mut slave_mode_2 = DpsSlaveMexModeM2::new();
             slave_mode_2.set_value_var_id(var.var_id)?;
-            slave_mode_2.set_size(u8::try_from(var.ref_var.len()).unwrap())?;
+            slave_mode_2.set_value_var_size(u8::try_from(var.ref_var.len()).unwrap())?;
             match var.data_type {
                 Unsigned |
-                Signed => slave_mode_2.set_xtype(0)?,
-                Floated => slave_mode_2.set_xtype(1)?,
+                Signed => slave_mode_2.set_value_var_type(0)?,
+                Floated => slave_mode_2.set_value_var_type(1)?,
             };
             slave_mex.set_m2(slave_mode_2)?;
             let raw_mex = CanMessage{

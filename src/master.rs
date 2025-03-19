@@ -27,7 +27,6 @@ pub struct DpsMaster {
     slaves_id: u16,
     send_f: SendFn,
     board_vec: Vec<MasterRecord>,
-    objs_count: u8, //4 bits
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -50,7 +49,6 @@ impl DpsMaster {
             slaves_id,
             send_f,
             board_vec: Vec::new(),
-            objs_count: 0,
         }
     }
 
@@ -217,7 +215,6 @@ impl DpsMaster {
             board_name: arr[..BOARD_NAME_LENGTH].try_into().unwrap(),
             vars: Vec::new(),
         };
-        self.objs_count += 1;
         self.board_vec.push(new_board);
         Ok(true)
     }
