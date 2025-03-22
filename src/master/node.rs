@@ -1,5 +1,3 @@
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use core::result::Result;
 
 use crate::common::messages::*;
@@ -15,18 +13,20 @@ pub struct VarRecord {
 }
 
 #[derive(Debug)]
-struct MasterRecord {
+struct MasterRecord<const S:usize> {
     id: u8,
     board_name: [u8; BOARD_NAME_LENGTH],
-    vars: Vec<VarRecord>,
+    vars: [Option<VarRecord>;S],
+    vars_cursor: usize,
 }
 
 #[derive(Debug)]
-pub struct DpsMaster {
+pub struct DpsMaster<const SB: usize, const SM:usize> {
     master_id: u16,
     slaves_id: u16,
     send_f: SendFn,
-    board_vec: Vec<MasterRecord>,
+    board_vec: [Option<MasterRecord<SM>>;SB],
+    board_vec_cursor :usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -42,13 +42,14 @@ pub struct VarValue<'a> {
     data_type: DataGenericType,
 }
 
-impl DpsMaster {
+impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
     pub fn new(master_id: u16, slaves_id: u16, send_f: SendFn) -> Self {
         Self {
             master_id,
             slaves_id,
             send_f,
-            board_vec: Vec::new(),
+            board_vec: [const {None};SB],
+            board_vec_cursor:0,
         }
     }
 
@@ -63,7 +64,7 @@ impl DpsMaster {
     }
 
     pub fn request_info(&self) -> Result<(), CanError> {
-        for board in self.board_vec.iter() {
+        for board in self.board_vec.iter().flatten() {
             let mut master_mex = DpsMasterMex::new(1)?;
             let mut master_mode_1 = DpsMasterMexModeM1::new();
             master_mode_1.set_var_name_board_id(board.id)?;
@@ -77,39 +78,39 @@ impl DpsMaster {
                 tries += 1;
             }
         }
-        Ok(())
+        todo!()
     }
 
-    pub fn list_board(&self) -> Box<[BoardInfo]> {
-        let mut vec_board_res = Vec::with_capacity(self.board_vec.len());
-        for board in self.board_vec.iter() {
+    pub fn list_board(&self) -> [Option<BoardInfo>;SB] {
+        let mut vec_board_res = [const {None};SB];
+        for (cursor_res,board) in self.board_vec.iter().flatten().enumerate() {
             let board_info = BoardInfo {
                 name: core::str::from_utf8(&board.board_name).ok().unwrap(),
                 id: board.id,
             };
-            vec_board_res.push(board_info);
+            vec_board_res[cursor_res] = Some(board_info);
         }
-        vec_board_res.into_boxed_slice()
+        vec_board_res
     }
 
-    pub fn list_vars(&self, board_id: u8) -> Option<Box<[VarRecord]>> {
-        let board = self.board_vec.iter().find(|b| b.id == board_id)?;
-        let mut vec_res = Vec::with_capacity(board.vars.len());
+    pub fn list_vars(&self, board_id: u8) -> Option<[Option<VarRecord>;SM]> {
+        let board = self._find_board(board_id)?;
+        let mut vec_res = [None;SM];
 
-        for var in board.vars.iter() {
-            vec_res.push(*var);
+        for (var_cursor,var) in board.vars.iter().flatten().enumerate() {
+            vec_res[var_cursor].replace(*var);
         }
 
-        Some(vec_res.into_boxed_slice())
+        Some(vec_res)
     }
 
     pub fn refresh_value_var(&self, board_id: u8, var_id: u8) -> Result<(), CanError> {
-        let board = self.board_vec.iter().find(|b| b.id == board_id);
+        let board = self._find_board(board_id);
         if board.is_none() {
             return Ok(());
         }
         let board = board.unwrap();
-        let var = board.vars.iter().find(|v| v.id == var_id);
+        let var = self._find_var(board_id, var_id);
         if var.is_none() {
             return Ok(());
         }
@@ -118,21 +119,20 @@ impl DpsMaster {
     }
 
     pub fn refresh_value_var_all(&self, board_id: u8) -> Result<(), CanError> {
-        let board = self.board_vec.iter().find(|b| b.id == board_id);
+        let board = self._find_board(board_id);
         if board.is_none() {
             return Ok(());
         }
         let board = board.unwrap();
 
-        for var in board.vars.iter() {
+        for var in board.vars.iter().flatten() {
             let _ = self._refresh_request_checked(board, var);
         }
         Ok(())
     }
 
     pub fn get_value_var(&self, board_id: u8, var_id: u8) -> Option<VarValue> {
-        let board = self.board_vec.iter().find(|b| b.id == board_id)?;
-        let var = board.vars.iter().find(|v| v.id == var_id)?;
+        let var = self._find_var(board_id, var_id)?;
 
         Some(VarValue {
             raw_data: &var.value,
@@ -144,12 +144,7 @@ impl DpsMaster {
     where
         T: Into<u32>,
     {
-        let board = self.board_vec.iter().find(|b| b.id == board_id);
-        if board.is_none() {
-            return Ok(());
-        }
-        let board = board.unwrap();
-        let var = board.vars.iter().find(|v| v.id == var_id);
+        let var = self._find_var(board_id, var_id);
         if var.is_none() {
             return Ok(());
         }
@@ -206,16 +201,18 @@ impl DpsMaster {
         dps_slave_mex_mode_m0: &DpsSlaveMexModeM0,
     ) -> Result<bool, CanError> {
         let arr = dps_slave_mex_mode_m0.board_name().to_ne_bytes();
-        if self.board_vec.iter_mut().any(|b| b.id == board_id) {
+        if self._find_board(board_id).is_none() {
             return Ok(false);
         }
 
         let new_board = MasterRecord {
             id: board_id,
             board_name: arr[..BOARD_NAME_LENGTH].try_into().unwrap(),
-            vars: Vec::new(),
+            vars: [const {None};SM],
+            vars_cursor:0,
         };
-        self.board_vec.push(new_board);
+        self.board_vec[self.board_vec_cursor].replace(new_board);
+        self.board_vec_cursor+=1;
         Ok(true)
     }
 
@@ -226,26 +223,8 @@ impl DpsMaster {
     ) -> Result<bool, CanError> {
         let var_id = dps_slave_mex_mode_m1.info_var_id();
         let var_name_arr = dps_slave_mex_mode_m1.var_name().to_le_bytes();
-        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
-        match board {
-            Some(board) => {
-                let var = board.vars.iter_mut().find(|v| v.id == var_id);
-                if var.is_none() {
-                    board.vars.push(VarRecord {
-                        id: var_id,
-                        name: var_name_arr[0..VAR_NAME_LENGTH].try_into().unwrap(),
-                        value: [0; 4],
-                        data_type: DataGenericType::Unsigned,
-                        size: 0,
-                    });
-                } else {
-                    let var = var.unwrap();
-                    var.name = var_name_arr[0..VAR_NAME_LENGTH].try_into().unwrap();
-                }
-                Ok(true)
-            }
-            None => Ok(false),
-        }
+        
+        Ok(false)
     }
 
     fn _get_var_metadata(
@@ -267,31 +246,7 @@ impl DpsMaster {
             DpsSlaveMexValueVarSize::_Other(_) => 1,
         };
 
-        let var_id = dps_slave_mex_mode_m2.value_var_id();
-        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
-        match board {
-            Some(board) => {
-                let var = board.vars.iter_mut().find(|v| v.id == var_id);
-                match var {
-                    Some(var) => {
-                        var.data_type = var_type;
-                        var.size = var_size;
-                        Ok(true)
-                    }
-                    None => {
-                        board.vars.push(VarRecord {
-                            id: var_id,
-                            name: [0; VAR_NAME_LENGTH],
-                            value: [0; 4],
-                            data_type: var_type,
-                            size: var_size,
-                        });
-                        Ok(true)
-                    }
-                }
-            }
-            None => Ok(false),
-        }
+        Ok(false)
     }
 
     fn _get_var_value(
@@ -300,27 +255,21 @@ impl DpsMaster {
         dps_slave_mex_mode_m3: &DpsSlaveMexModeM3,
     ) -> Result<bool, CanError> {
         let var_id = dps_slave_mex_mode_m3.var_id();
-        let board = self.board_vec.iter_mut().find(|b| b.id == board_id);
 
-        match board {
-            None => Ok(false),
-            Some(board) => {
-                let var = board.vars.iter_mut().find(|v| v.id == var_id);
-                match var {
-                    None => (),
-                    Some(var) => {
-                        let arr = dps_slave_mex_mode_m3.value().to_le_bytes();
-                        var.value = arr;
-                    }
-                }
-                Ok(true)
+        let var = self._find_var_mut(board_id, var_id);
+        match var {
+            None => (),
+            Some(var) => {
+                let arr = dps_slave_mex_mode_m3.value().to_le_bytes();
+                var.value = arr;
             }
         }
+        Ok(true)
     }
 
     fn _refresh_request_checked(
         &self,
-        board: &MasterRecord,
+        board: &MasterRecord<SM>,
         var: &VarRecord,
     ) -> Result<(), CanError> {
         let master_mex = DpsMasterMex::new(3).ok();
@@ -348,5 +297,61 @@ impl DpsMaster {
         }
 
         Ok(())
+    }
+
+    fn _find_board(&self, board_id: u8) -> Option<&MasterRecord<SM>>
+    {
+        let f =self.board_vec.iter().find(|b|{
+            match b {
+                Some(b) => b.id == board_id,
+                None => false,
+            }
+        })?;
+
+        if let Some(board) = f{
+            return Some(board);
+        }
+        None
+    }
+
+    fn _find_board_mut(&mut self, board_id: u8) -> Option<&mut MasterRecord<SM>>
+    {
+        let f =self.board_vec.iter_mut().find(|b|{
+            match b {
+                Some(b) => b.id == board_id,
+                None => false,
+            }
+        })?;
+
+        if let Some(board) = f{
+            return Some(board);
+        }
+        None
+    }
+
+    fn _find_var(&self, board_id: u8, var_id: u8) -> Option<&VarRecord>
+    {
+        let b = self._find_board(board_id)?;
+        let var = b.vars.iter().find(|v|{
+            match v{
+                Some(var) => var.id == var_id,
+                None => false,
+            }
+        })?;
+
+        var.as_ref()
+    }
+
+    fn _find_var_mut(&mut self, board_id: u8, var_id: u8) -> Option<&mut VarRecord>
+    {
+        let b = self._find_board_mut(board_id)?;
+        let var = b.vars.iter_mut().find(|v|{
+            match v{
+                Some(var) => var.id == var_id,
+                None => false,
+            }
+        })?;
+
+        var.as_mut()
     }
 }
