@@ -1,6 +1,4 @@
 #![no_std]
-extern crate alloc;
-
 mod common;
 
 pub mod master;

@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 use crate::common::messages::*;
 use crate::common::types::DpsType;
 use crate::common::*;
@@ -17,10 +15,11 @@ struct VarRecordSlave<'a> {
 }
 
 #[derive(Debug)]
-pub struct DpsSlave<'a> {
+pub struct DpsSlave<'a, const S: usize> {
     board_name: &'a str,
     send_f: SendFn,
-    vars: Vec<VarRecordSlave<'a>>,
+    vars: [Option<VarRecordSlave<'a>>;S],
+    var_cursor:usize,
     board_id: u8,
     obj_ids: u8,
     master_id: u16,
@@ -28,7 +27,7 @@ pub struct DpsSlave<'a> {
     enable: bool,
 }
 
-impl<'a> DpsSlave<'a> {
+impl<'a, const S: usize> DpsSlave<'a,S> {
     pub fn new(
         board_name: &'a [u8],
         send_f: SendFn,
@@ -40,10 +39,15 @@ impl<'a> DpsSlave<'a> {
             return Err("var name string too long ");
         }
 
+        if S >= 2usize.pow(4) {
+            return Err("Invalid Var buffer size");
+        }
+
         Ok(Self {
             board_name: core::str::from_utf8(board_name).unwrap(),
             send_f,
-            vars: Vec::new(),
+            vars: [const {None};S],
+            var_cursor:0,
             board_id,
             obj_ids: 0,
             master_id,
@@ -77,6 +81,11 @@ impl<'a> DpsSlave<'a> {
             return Err("Current dps node full");
         }
 
+        if self.obj_ids >= 2u8.pow(4)
+        {
+            return Err("Dps slave is full");   
+        }
+
         let new_id = self.obj_ids;
         self.obj_ids+=1;
 
@@ -87,7 +96,8 @@ impl<'a> DpsSlave<'a> {
             post_update_f,
         };
 
-        self.vars.push(new_var);
+        self.vars[self.var_cursor] = Some(new_var);
+        self.var_cursor+=1;
 
         Ok(())
     }
@@ -129,15 +139,26 @@ impl<'a> DpsSlave<'a> {
 
         let var = self.vars
             .iter_mut()
-            .find(|x| x.var_id == master_mex.update_var_value_var_id());
+            .find(|x| {
+                if let Some(var) = x {
+                    var.var_id == master_mex.update_var_value_var_id()
+                }else{
+                    false
+                }
+            });
 
         match var 
         {
             Some(var) => 
             {
-                let _ = var.ref_var.update(&val_slice);
-                (var.post_update_f)(var.var_name, var.ref_var);
-                Ok(())
+                if let Some(var) = var 
+                {
+                    let _ = var.ref_var.update(&val_slice);
+                    (var.post_update_f)(var.var_name, var.ref_var);
+                    Ok(())
+                }else{
+                    Err("variable not found")
+                }
             },
             None => Err("variable not found"),
         }
@@ -155,8 +176,19 @@ impl<'a> DpsSlave<'a> {
 
         self.vars
             .iter()
-            .find(|x| x.var_id == master_mex.var_value_var_id())
+            .find(|x|{
+                if let Some(var) = x
+                {
+                    var.var_id == master_mex.var_value_var_id()
+                }else{
+                    false
+                }
+            })
             .inspect(|x| {
+                if let None = x {
+                    return;
+                };
+                let x = x.as_ref().unwrap();
                 let var_value: u32 = 42;
                 slave_mex_mode_3.set_var_id(x.var_id).ok().unwrap();
                 slave_mex_mode_3.set_value(var_value).ok().unwrap();
@@ -176,23 +208,26 @@ impl<'a> DpsSlave<'a> {
         }
 
         for var in self.vars.iter() {
-            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
-            let mut slave_mode_2 = DpsSlaveMexModeM2::new();
-            slave_mode_2.set_value_var_id(var.var_id).ok().unwrap();
-            slave_mode_2.set_value_var_size(var.ref_var.get_type_size().try_into().unwrap())
-                .ok().unwrap();
-            match var.ref_var.get_type_category(){
-                Unsigned | Signed => slave_mode_2.set_value_var_type(0).ok().unwrap(),
-                Floated => slave_mode_2.set_value_var_type(1).ok().unwrap(),
-            };
-            slave_mex.set_m2(slave_mode_2).ok().unwrap();
-            let raw_mex = CanMessage {
-                id: self.slave_id,
-                payload: slave_mex.raw(),
-            };
-            let mut tries = 0;
-            while (self.send_f)(&raw_mex).is_err() && tries < 32 {
-                tries += 1;
+            if let Some(var) = var
+            {
+                let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
+                let mut slave_mode_2 = DpsSlaveMexModeM2::new();
+                slave_mode_2.set_value_var_id(var.var_id).ok().unwrap();
+                slave_mode_2.set_value_var_size(var.ref_var.get_type_size().try_into().unwrap())
+                    .ok().unwrap();
+                match var.ref_var.get_type_category(){
+                    Unsigned | Signed => slave_mode_2.set_value_var_type(0).ok().unwrap(),
+                    Floated => slave_mode_2.set_value_var_type(1).ok().unwrap(),
+                };
+                slave_mex.set_m2(slave_mode_2).ok().unwrap();
+                let raw_mex = CanMessage {
+                    id: self.slave_id,
+                    payload: slave_mex.raw(),
+                };
+                let mut tries = 0;
+                while (self.send_f)(&raw_mex).is_err() && tries < 32 {
+                    tries += 1;
+                }
             }
         }
         Ok(())
@@ -204,18 +239,21 @@ impl<'a> DpsSlave<'a> {
         }
 
         for var in self.vars.iter() {
-            let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
-            let mut slave_mode_1 = DpsSlaveMexModeM1::new();
-            slave_mode_1.set_info_var_id(var.var_id).ok().unwrap();
-            slave_mode_1.set_var_name(str::parse(var.var_name).unwrap()).ok().unwrap();
-            slave_mex.set_m1(slave_mode_1).ok().unwrap();
-            let raw_mex = CanMessage {
-                id: self.slave_id,
-                payload: slave_mex.raw(),
-            };
-            let mut tries = 0;
-            while (self.send_f)(&raw_mex).is_err() && tries < 32 {
-                tries += 1;
+            if let Some(var) = var
+            {
+                let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
+                let mut slave_mode_1 = DpsSlaveMexModeM1::new();
+                slave_mode_1.set_info_var_id(var.var_id).ok().unwrap();
+                slave_mode_1.set_var_name(str::parse(var.var_name).unwrap()).ok().unwrap();
+                slave_mex.set_m1(slave_mode_1).ok().unwrap();
+                let raw_mex = CanMessage {
+                    id: self.slave_id,
+                    payload: slave_mex.raw(),
+                };
+                let mut tries = 0;
+                while (self.send_f)(&raw_mex).is_err() && tries < 32 {
+                    tries += 1;
+                }
             }
         }
 
