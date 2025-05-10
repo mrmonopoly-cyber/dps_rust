@@ -35,10 +35,10 @@ BS_:
 BU_: MASTER SLAVE
 
 BO_ 650 DpsSlaveMex: 8 SLAVE
- SG_ board_id: 0|4@1+ (1,0) [0|15] "slave board id" VECTOR_XXX
+ SG_ board_id : 0|4@1+ (1,0) [0|15] "slave board id" VECTOR_XXX
  SG_ Mode M : 4|4@1+ (1,0) [0|15] "slave mex type" VECTOR_XXX
  SG_ id m0 : 8|4@1+ (1,0) [0|15] "slave board id" VECTOR_XXX
- SG_ board_name m0 : 16|56@1+ (1,0) [0|0] "slave board name" VECTOR_XXX
+ SG_ board_name m0 : 16|48@1+ (1,0) [0|0] "slave board name" VECTOR_XXX
  SG_ info_var_id m1 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ var_name m1 : 16|48@1+ (1,0) [0|0] "slave var name" VECTOR_XXX
  SG_ value_var_id m2 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
@@ -47,7 +47,7 @@ BO_ 650 DpsSlaveMex: 8 SLAVE
  SG_ var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ value m3 : 16|32@1+ (1,0) [0|2] "slave var value" VECTOR_XXX
 
-BO_ 651 DpsMasterMex: 8 SLAVE
+BO_ 651 DpsMasterMex: 8 MASTER
  SG_ Mode M : 0|4@1+ (1,0) [0|15] "slave mex type" VECTOR_XXX
  SG_ reserved m0 : 4|1@1+ (1,0) [0|0] "" VECTOR_XXX
  SG_ var_name_board_id m1 : 4|4@1+ (1,0) [0|15] "slave board id" VECTOR_XXX
@@ -57,12 +57,10 @@ BO_ 651 DpsMasterMex: 8 SLAVE
  SG_ var_value_var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ value m3 : 16|32@1+ (1,0) [0|0] "slave var value" VECTOR_XXX
 
-VAL_ 650 Mode 0 "BoardName" 1 "VarName" 2 "VarMetadata" 3 "VarValue"
-VAL_ 651 Mode 0 "Discover Boards" 1 "Request Infos Board" 2 "Req var value" 3 "Update var value"
-VAL_ 650 type 0 "Unsigned" 1 "Signed" 2 "Floated"
-VAL_ 650 size 0 "8-bit" 1 "16-bit" 2 "32-bit"
-
-
+VAL_ 650 Mode 0 "BoardName" 1 "VarName" 2 "VarMetadata" 3 "VarValue";
+VAL_ 650 type 0 "Unsigned" 1 "Signed" 2 "Floated";
+VAL_ 650 size 0 "8-bit" 1 "16-bit" 2 "32-bit";
+VAL_ 651 Mode 0 "Discover Boards" 1 "Request Infos Board" 2 "Req var value" 3 "Update var value";
 
 SG_MUL_VAL_ 650 id Mode 0-0;
 SG_MUL_VAL_ 650 board_name Mode 0-0;
