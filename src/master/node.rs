@@ -150,13 +150,13 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         }
 
         let mut master_mex = DpsMasterMex::new(4)?;
-        let mut master_mex_mode_4 = DpsMasterMexModeM4::new();
+        let mut master_mex_mode_3 = DpsMasterMexModeM3::new();
 
-        master_mex_mode_4.set_update_var_value_board_id(board_id)?;
-        master_mex_mode_4.set_update_var_value_var_id(var_id)?;
-        master_mex_mode_4.set_update_var_value_var_value(data.into())?;
+        master_mex_mode_3.set_var_value_board_id(board_id)?;
+        master_mex_mode_3.set_var_value_var_id(var_id)?;
+        master_mex_mode_3.set_value(data.into())?;
 
-        master_mex.set_m4(master_mex_mode_4)?;
+        master_mex.set_m3(master_mex_mode_3)?;
         let raw_mex = CanMessage {
             id: self.master_id,
             payload: master_mex.raw(),
@@ -233,16 +233,16 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         dps_slave_mex_mode_m2: &DpsSlaveMexModeM2,
     ) -> Result<bool, CanError> {
         let var_type = match dps_slave_mex_mode_m2.value_var_type() {
-            DpsSlaveMexValueVarType::UnsignedInteger => DataGenericType::Unsigned,
-            DpsSlaveMexValueVarType::SignedInteger => DataGenericType::Signed,
-            DpsSlaveMexValueVarType::Float => DataGenericType::Floated,
+            DpsSlaveMexValueVarType::Unsigned=> DataGenericType::Unsigned,
+            DpsSlaveMexValueVarType::Signed=> DataGenericType::Signed,
+            DpsSlaveMexValueVarType::Floated=> DataGenericType::Floated,
             DpsSlaveMexValueVarType::_Other(_) => DataGenericType::Unsigned,
         };
 
         let var_size = match dps_slave_mex_mode_m2.value_var_size() {
-            DpsSlaveMexValueVarSize::X8bit => 1,
-            DpsSlaveMexValueVarSize::X16bit => 2,
-            DpsSlaveMexValueVarSize::X32bit => 4,
+            DpsSlaveMexValueVarSize::X8Bit=> 1,
+            DpsSlaveMexValueVarSize::X16Bit => 2,
+            DpsSlaveMexValueVarSize::X32Bit => 4,
             DpsSlaveMexValueVarSize::_Other(_) => 1,
         };
 

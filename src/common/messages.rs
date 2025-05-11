@@ -64,10 +64,10 @@ impl DpsSlaveMex {
     pub const VAR_NAME_MAX: u64 = 0_u64;
     pub const VALUE_VAR_ID_MIN: u8 = 0_u8;
     pub const VALUE_VAR_ID_MAX: u8 = 15_u8;
-    pub const XTYPE_MIN: u8 = 0_u8;
-    pub const XTYPE_MAX: u8 = 2_u8;
-    pub const SIZE_MIN: u8 = 0_u8;
-    pub const SIZE_MAX: u8 = 2_u8;
+    pub const VALUE_VAR_TYPE_MIN: u8 = 0_u8;
+    pub const VALUE_VAR_TYPE_MAX: u8 = 2_u8;
+    pub const VALUE_VAR_SIZE_MIN: u8 = 0_u8;
+    pub const VALUE_VAR_SIZE_MAX: u8 = 2_u8;
     pub const VAR_ID_MIN: u8 = 0_u8;
     pub const VAR_ID_MAX: u8 = 15_u8;
     pub const VALUE_MIN: u32 = 0_u32;
@@ -233,67 +233,44 @@ impl<'a> Arbitrary<'a> for DpsSlaveMex {
         DpsSlaveMex::new(board_id,mode).map_err(|_| arbitrary::Error::IncorrectFormat)
     }
 }
-/// Defined values for Mode
+/// Defined values for value_var_type
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsSlaveMexMode {
-    BoardName,
-    VarName,
-    VarMetadata,
-    VarValue,
-    _Other(u8),
-}
-
-impl From<DpsSlaveMexMode> for u8 {
-    fn from(val: DpsSlaveMexMode) -> u8 {
-        match val {
-            DpsSlaveMexMode::BoardName => 0,
-            DpsSlaveMexMode::VarName => 1,
-            DpsSlaveMexMode::VarMetadata => 2,
-            DpsSlaveMexMode::VarValue => 3,
-            DpsSlaveMexMode::_Other(x) => x,
-        }
-    }
-}
-
-/// Defined values for type
-#[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsSlaveMexType {
+pub enum DpsSlaveMexValueVarType {
     Unsigned,
     Signed,
     Floated,
     _Other(u8),
 }
 
-impl From<DpsSlaveMexType> for u8 {
-    fn from(val: DpsSlaveMexType) -> u8 {
+impl From<DpsSlaveMexValueVarType> for u8 {
+    fn from(val: DpsSlaveMexValueVarType) -> u8 {
         match val {
-            DpsSlaveMexType::Unsigned => 0,
-            DpsSlaveMexType::Signed => 1,
-            DpsSlaveMexType::Floated => 2,
-            DpsSlaveMexType::_Other(x) => x,
+            DpsSlaveMexValueVarType::Unsigned => 0,
+            DpsSlaveMexValueVarType::Signed => 1,
+            DpsSlaveMexValueVarType::Floated => 2,
+            DpsSlaveMexValueVarType::_Other(x) => x,
         }
     }
 }
 
-/// Defined values for size
+/// Defined values for value_var_size
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsSlaveMexSize {
+pub enum DpsSlaveMexValueVarSize {
     X8Bit,
     X16Bit,
     X32Bit,
     _Other(u8),
 }
 
-impl From<DpsSlaveMexSize> for u8 {
-    fn from(val: DpsSlaveMexSize) -> u8 {
+impl From<DpsSlaveMexValueVarSize> for u8 {
+    fn from(val: DpsSlaveMexValueVarSize) -> u8 {
         match val {
-            DpsSlaveMexSize::X8Bit => 0,
-            DpsSlaveMexSize::X16Bit => 1,
-            DpsSlaveMexSize::X32Bit => 2,
-            DpsSlaveMexSize::_Other(x) => x,
+            DpsSlaveMexValueVarSize::X8Bit => 0,
+            DpsSlaveMexValueVarSize::X16Bit => 1,
+            DpsSlaveMexValueVarSize::X32Bit => 2,
+            DpsSlaveMexValueVarSize::_Other(x) => x,
         }
     }
 }
@@ -514,25 +491,25 @@ pub fn set_value_var_id(&mut self, value: u8) -> Result<(), CanError> {
     Ok(())
 }
 
-/// type
+/// value_var_type
 ///
 /// - Min: 0
 /// - Max: 2
 /// - Unit: "slave var type"
 /// - Receivers: VECTOR_XXX
 #[inline(always)]
-pub fn xtype(&self) -> DpsSlaveMexType {
+pub fn value_var_type(&self) -> DpsSlaveMexValueVarType {
     let signal = self.raw.view_bits::<Lsb0>()[12..14].load_le::<u8>();
     
     match signal {
-        0 => DpsSlaveMexType::Unsigned,
-        1 => DpsSlaveMexType::Signed,
-        2 => DpsSlaveMexType::Floated,
-        _ => DpsSlaveMexType::_Other(self.xtype_raw()),
+        0 => DpsSlaveMexValueVarType::Unsigned,
+        1 => DpsSlaveMexValueVarType::Signed,
+        2 => DpsSlaveMexValueVarType::Floated,
+        _ => DpsSlaveMexValueVarType::_Other(self.value_var_type_raw()),
     }
 }
 
-/// Get raw value of type
+/// Get raw value of value_var_type
 ///
 /// - Start bit: 12
 /// - Signal size: 2 bits
@@ -541,15 +518,15 @@ pub fn xtype(&self) -> DpsSlaveMexType {
 /// - Byte order: LittleEndian
 /// - Value type: Unsigned
 #[inline(always)]
-pub fn xtype_raw(&self) -> u8 {
+pub fn value_var_type_raw(&self) -> u8 {
     let signal = self.raw.view_bits::<Lsb0>()[12..14].load_le::<u8>();
     
     signal
 }
 
-/// Set value of type
+/// Set value of value_var_type
 #[inline(always)]
-pub fn set_xtype(&mut self, value: u8) -> Result<(), CanError> {
+pub fn set_value_var_type(&mut self, value: u8) -> Result<(), CanError> {
     #[cfg(feature = "range_checked")]
     if value < 0_u8 || 2_u8 < value {
         return Err(CanError::ParameterOutOfRange { message_id: 650 });
@@ -558,25 +535,25 @@ pub fn set_xtype(&mut self, value: u8) -> Result<(), CanError> {
     Ok(())
 }
 
-/// size
+/// value_var_size
 ///
 /// - Min: 0
 /// - Max: 2
 /// - Unit: "slave var size"
 /// - Receivers: VECTOR_XXX
 #[inline(always)]
-pub fn size(&self) -> DpsSlaveMexSize {
+pub fn value_var_size(&self) -> DpsSlaveMexValueVarSize {
     let signal = self.raw.view_bits::<Lsb0>()[14..16].load_le::<u8>();
     
     match signal {
-        0 => DpsSlaveMexSize::X8Bit,
-        1 => DpsSlaveMexSize::X16Bit,
-        2 => DpsSlaveMexSize::X32Bit,
-        _ => DpsSlaveMexSize::_Other(self.size_raw()),
+        0 => DpsSlaveMexValueVarSize::X8Bit,
+        1 => DpsSlaveMexValueVarSize::X16Bit,
+        2 => DpsSlaveMexValueVarSize::X32Bit,
+        _ => DpsSlaveMexValueVarSize::_Other(self.value_var_size_raw()),
     }
 }
 
-/// Get raw value of size
+/// Get raw value of value_var_size
 ///
 /// - Start bit: 14
 /// - Signal size: 2 bits
@@ -585,15 +562,15 @@ pub fn size(&self) -> DpsSlaveMexSize {
 /// - Byte order: LittleEndian
 /// - Value type: Unsigned
 #[inline(always)]
-pub fn size_raw(&self) -> u8 {
+pub fn value_var_size_raw(&self) -> u8 {
     let signal = self.raw.view_bits::<Lsb0>()[14..16].load_le::<u8>();
     
     signal
 }
 
-/// Set value of size
+/// Set value of value_var_size
 #[inline(always)]
-pub fn set_size(&mut self, value: u8) -> Result<(), CanError> {
+pub fn set_value_var_size(&mut self, value: u8) -> Result<(), CanError> {
     #[cfg(feature = "range_checked")]
     if value < 0_u8 || 2_u8 < value {
         return Err(CanError::ParameterOutOfRange { message_id: 650 });
@@ -835,29 +812,6 @@ impl<'a> Arbitrary<'a> for DpsMasterMex {
         DpsMasterMex::new(mode).map_err(|_| arbitrary::Error::IncorrectFormat)
     }
 }
-/// Defined values for Mode
-#[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "debug", derive(Debug))]
-pub enum DpsMasterMexMode {
-    DiscoverBoards,
-    RequestInfosBoard,
-    ReqVarValue,
-    UpdateVarValue,
-    _Other(u8),
-}
-
-impl From<DpsMasterMexMode> for u8 {
-    fn from(val: DpsMasterMexMode) -> u8 {
-        match val {
-            DpsMasterMexMode::DiscoverBoards => 0,
-            DpsMasterMexMode::RequestInfosBoard => 1,
-            DpsMasterMexMode::ReqVarValue => 2,
-            DpsMasterMexMode::UpdateVarValue => 3,
-            DpsMasterMexMode::_Other(x) => x,
-        }
-    }
-}
-
 /// Defined values for multiplexed signal DpsMasterMex
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub enum DpsMasterMexMode {

@@ -5,3 +5,9 @@ edition = "2024"
 
 [dependencies]
 bitvec = "1.0.1"
+
+[features]
+range_checked = []  #INFO: to silence warning of generated code for the parser
+arb= []             #INFO: to silence warning of generated code for the parser
+std= []             #INFO: to silence warning of generated code for the parser
+debug=[]            #INFO: to silence warning of generated code for the parser

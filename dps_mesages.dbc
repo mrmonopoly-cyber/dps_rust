@@ -42,8 +42,8 @@ BO_ 650 DpsSlaveMex: 8 SLAVE
  SG_ info_var_id m1 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ var_name m1 : 16|48@1+ (1,0) [0|0] "slave var name" VECTOR_XXX
  SG_ value_var_id m2 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
- SG_ type m2 : 12|2@1+ (1,0) [0|2] "slave var type" VECTOR_XXX
- SG_ size m2 : 14|2@1+ (1,0) [0|2] "slave var size" VECTOR_XXX
+ SG_ value_var_type m2 : 12|2@1+ (1,0) [0|2] "slave var type" VECTOR_XXX
+ SG_ value_var_size m2 : 14|2@1+ (1,0) [0|2] "slave var size" VECTOR_XXX
  SG_ var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ value m3 : 16|32@1+ (1,0) [0|2] "slave var value" VECTOR_XXX
 
@@ -57,12 +57,10 @@ BO_ 651 DpsMasterMex: 8 MASTER
  SG_ var_value_var_id m3 : 8|4@1+ (1,0) [0|15] "slave var id" VECTOR_XXX
  SG_ value m3 : 16|32@1+ (1,0) [0|0] "slave var value" VECTOR_XXX
 
-VAL_ 650 Mode 0 "BoardName" 1 "VarName" 2 "VarMetadata" 3 "VarValue";
-VAL_ 650 type 0 "Unsigned" 1 "Signed" 2 "Floated";
-VAL_ 650 size 0 "8-bit" 1 "16-bit" 2 "32-bit";
-VAL_ 651 Mode 0 "Discover Boards" 1 "Request Infos Board" 2 "Req var value" 3 "Update var value";
+VAL_ 650 value_var_type 0 "Unsigned" 1 "Signed" 2 "Floated";
+VAL_ 650 value_var_size 0 "8-bit" 1 "16-bit" 2 "32-bit";
 
-SG_MUL_VAL_ 650 id Mode 0-0;
+SG_MUL_VAL_ 650 id Mode 4-8;
 SG_MUL_VAL_ 650 board_name Mode 0-0;
 SG_MUL_VAL_ 650 board_id Mode 3-3;
 SG_MUL_VAL_ 650 var_id Mode 3-3;
@@ -70,7 +68,7 @@ SG_MUL_VAL_ 650 var_name Mode 1-1;
 SG_MUL_VAL_ 650 type Mode 2-2;
 SG_MUL_VAL_ 650 size Mode 2-2;
 SG_MUL_VAL_ 650 value Mode 3-3;
-SG_MUL_VAL_ 651 reserved Mode 0-0;
+SG_MUL_VAL_ 651 reserved Mode 0-4;
 SG_MUL_VAL_ 651 board_id Mode 3-3;
 SG_MUL_VAL_ 651 var_id Mode 3-3;
 SG_MUL_VAL_ 651 value Mode 3-3;

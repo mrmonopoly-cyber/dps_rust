@@ -1,7 +1,7 @@
-use self::messages::CanError;
-
-pub mod messages;
 pub mod types;
+
+#[allow(unused, dead_code)]
+pub mod messages;
 
 pub const BOARD_NAME_LENGTH : usize  =7;
 pub const VAR_NAME_LENGTH : usize= 6;
@@ -32,4 +32,4 @@ pub struct CanMessage<'a>{
     pub payload: &'a[u8],
 }
 
-pub type SendFn = fn(&CanMessage) -> Result<(),CanError>;
+pub type SendFn = fn(&CanMessage) -> Result<(),messages::CanError>;
