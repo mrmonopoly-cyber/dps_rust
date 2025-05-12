@@ -129,7 +129,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
 
     //private
 
-    fn _send_mex(&self, mex: &CanMessage, err: &'a str) -> Result<(), &'a str>{
+    fn _send_mex(&'a self, mex: &CanMessage, err: &'a str) -> Result<(), &'a str>{
         let mut tries = 0;
         while (self.send_f)(mex).is_err() && tries < 32 {
             tries += 1;
@@ -177,7 +177,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
 
 
 
-    fn _request_var_value(& self, master_mex: &DpsMasterMexModeM2) -> Result<(), &'a str> {
+    fn _request_var_value(&'a self, master_mex: &DpsMasterMexModeM2) -> Result<(), &'a str> {
         if self.board_id != master_mex.var_refresh_board_id()
         {
             return Ok(());
@@ -213,7 +213,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         self._send_mex(&raw_mex, "failed send message for request var value")
     }
 
-    fn _request_info(&self, master_mex: &DpsMasterMexModeM1) -> Result<(), &'a str> {
+    fn _request_info(&'a self, master_mex: &DpsMasterMexModeM1) -> Result<(), &'a str> {
         if self.board_id != master_mex.var_name_board_id() {
             return Ok(());
         }
@@ -250,7 +250,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         Ok(())
     }
 
-    fn _discover_board(&self) -> Result<(), &'a str> {
+    fn _discover_board(&'a self) -> Result<(), &'a str> {
         let mut slave_mex = DpsSlaveMex::new(self.board_id, 0).ok().unwrap();
         let mut slave_mode_0 = DpsSlaveMexModeM0::new();
         slave_mode_0.set_board_name(str::parse(self.board_name).unwrap()).ok().unwrap();
