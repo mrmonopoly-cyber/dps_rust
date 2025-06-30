@@ -23,19 +23,20 @@ struct VarRecord {
     data_type: DataGenericType,
 }
 
+const MAX_VAR_FOR_SLAVE : usize = 16;
 #[derive(Debug)]
-struct MasterRecord<const S:usize> {
+struct MasterRecord {
     id: u8,
     board_name: [u8; BOARD_NAME_LENGTH],
-    vars: [Option<VarRecord>;S],
+    vars: [Option<VarRecord>;MAX_VAR_FOR_SLAVE],
 }
 
 #[derive(Debug)]
-pub struct DpsMaster<const SB: usize, const SM:usize> {
+pub struct DpsMaster<const SB: usize> {
     master_id: u16,
     slaves_id: u16,
     send_f: SendFn,
-    board_vec: [Option<MasterRecord<SM>>;SB],
+    board_vec: [Option<MasterRecord>;SB],
     board_vec_cursor :usize,
 }
 
@@ -52,7 +53,7 @@ pub struct VarValue<'a> {
     data_type: DataGenericType,
 }
 
-impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
+impl<const SB:usize> DpsMaster<SB> {
     pub fn new(master_id: u16, slaves_id: u16, send_f: SendFn) -> Self {
         Self {
             master_id,
@@ -102,9 +103,9 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         vec_board_res
     }
 
-    pub fn list_vars<'a>(&self, board_id: u8) -> Option<[Option<VarInfo>;SM]> {
+    pub fn list_vars<'a>(&self, board_id: u8) -> Option<[Option<VarInfo>;MAX_VAR_FOR_SLAVE]> {
         let board = self._find_board(board_id)?;
-        let mut vec_res : [Option<VarInfo>;SM] = core::array::from_fn(|_| None);
+        let mut vec_res : [Option<VarInfo>;MAX_VAR_FOR_SLAVE] = core::array::from_fn(|_| None);
         let mut empty = true;
 
         for (var_cursor,var) in board.vars.iter().flatten().enumerate() {
@@ -245,7 +246,7 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
 
     //private
 
-    fn _get_var_id(&self, board: &MasterRecord<SM>, var: &VarRecord) -> u8{
+    fn _get_var_id(&self, board: &MasterRecord, var: &VarRecord) -> u8{
         let base_array = board.vars.as_ptr() as *const &VarRecord;
         let ele = var as * const VarRecord;
         unsafe {ele.offset_from(*base_array) as u8}
@@ -276,7 +277,7 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         let new_board = MasterRecord {
             id: board_id,
             board_name: arr[..BOARD_NAME_LENGTH].try_into().unwrap(),
-            vars: [const {None};SM],
+            vars: [const {None};MAX_VAR_FOR_SLAVE],
         };
         self.board_vec[self.board_vec_cursor].replace(new_board);
         self.board_vec_cursor+=1;
@@ -364,7 +365,7 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
 
     fn _refresh_request_checked(
         &self,
-        board: &MasterRecord<SM>,
+        board: &MasterRecord,
         var: &VarRecord,
     ) -> Result<(), CanError> {
         let master_mex = DpsMasterMex::new(3).ok();
@@ -395,7 +396,7 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         Ok(())
     }
 
-    fn _find_board(&self, board_id: u8) -> Option<&MasterRecord<SM>>
+    fn _find_board(&self, board_id: u8) -> Option<&MasterRecord>
     {
         let f =self.board_vec.iter().find(|b|{
             match b {
@@ -410,7 +411,7 @@ impl<const SB:usize, const SM: usize> DpsMaster<SB,SM> {
         None
     }
 
-    fn _find_board_mut(&mut self, board_id: u8) -> Option<&mut MasterRecord<SM>>
+    fn _find_board_mut(&mut self, board_id: u8) -> Option<&mut MasterRecord>
     {
         let f =self.board_vec.iter_mut().find(|b|{
             match b {

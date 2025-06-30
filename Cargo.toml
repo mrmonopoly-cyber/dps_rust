@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 bitvec = "1.0.1"
+ctor = "0.4.2"
+socketcan = "3.5.0"
 
 [features]
 range_checked = []  #INFO: to silence warning of generated code for the parser

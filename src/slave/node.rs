@@ -4,21 +4,23 @@ use crate::common::*;
 
 use DataGenericType::*;
 
-pub type PostUpdateFn<'a> = fn(var_name: &'a str, var_data: &'a dyn DpsType);
+pub type PostUpdateFn = fn(var_name: &[u8], var_data: &dyn DpsType);
 
 #[derive(Debug)]
 struct VarRecordSlave<'a> {
     ref_var: &'a mut dyn DpsType,
-    var_name: &'a str,
+    var_name: [u8;VAR_NAME_LENGTH],
     var_id: u8, //4 bits
-    post_update_f: PostUpdateFn<'a>,
+    post_update_f: Option<PostUpdateFn>,
 }
 
+const MAX_NUM_VARS: usize = 16;
+
 #[derive(Debug)]
-pub struct DpsSlave<'a, const S: usize> {
-    board_name: &'a str,
+pub struct DpsSlave<'a> {
+    board_name: [u8;BOARD_NAME_LENGTH],
     send_f: SendFn,
-    vars: [Option<VarRecordSlave<'a>>;S],
+    vars: [Option<VarRecordSlave<'a>>;MAX_NUM_VARS],
     var_cursor:usize,
     board_id: u8,
     obj_ids: u8,
@@ -27,26 +29,25 @@ pub struct DpsSlave<'a, const S: usize> {
     enable: bool,
 }
 
-impl<'a, const S: usize> DpsSlave<'a,S> {
+impl<'a> DpsSlave<'a> {
     pub fn new(
-        board_name: &'a [u8],
+        board_name: &str,
         send_f: SendFn,
         board_id: u8,
         master_id: u16,
         slave_id: u16,
-    ) -> Result<Self, &'a str> {
-        if board_name.len() > VAR_NAME_LENGTH {
+    ) -> Result<Self, &str> {
+        if board_name.len() > BOARD_NAME_LENGTH{
             return Err("var name string too long ");
         }
 
-        if S >= 2usize.pow(4) {
-            return Err("Invalid Var buffer size");
-        }
+        let mut name_arr = [0;BOARD_NAME_LENGTH];
+        name_arr[..board_name.len()].copy_from_slice(board_name.as_bytes());
 
         Ok(Self {
-            board_name: core::str::from_utf8(board_name).unwrap(),
+            board_name: name_arr,
             send_f,
-            vars: [const {None};S],
+            vars: [const {None};MAX_NUM_VARS],
             var_cursor:0,
             board_id,
             obj_ids: 0,
@@ -61,15 +62,15 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
     }
 
     pub fn disable(&mut self) {
-        self.enable = true
+        self.enable = false 
     }
 
     pub fn monitor_var(
-        &'a mut self,
-        var_name: &'a str,
+        &mut self,
+        var_name: &str,
         var: &'a mut dyn DpsType,
-        post_update_f: PostUpdateFn<'a>,
-    ) -> Result<(), &'a str> {
+        post_update_f: Option<PostUpdateFn>,
+    ) -> Result<(), &str> {
         if !self.enable {
             return Err("dps is disable");
         }
@@ -89,12 +90,13 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         let new_id = self.obj_ids;
         self.obj_ids+=1;
 
-        let new_var = VarRecordSlave{
+        let mut new_var = VarRecordSlave{
             ref_var: var,
-            var_name,
+            var_name: [0;VAR_NAME_LENGTH],
             var_id: new_id,
             post_update_f,
         };
+        new_var.var_name[..var_name.len()].copy_from_slice(var_name.as_bytes());
 
         self.vars[self.var_cursor] = Some(new_var);
         self.var_cursor+=1;
@@ -102,7 +104,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         Ok(())
     }
 
-    pub fn check_can_mex_recv(&'a mut self, mex: &CanMessage) -> Result<(), &'a str> {
+    pub fn check_can_mex_recv(&mut self, mex: &CanMessage) -> Result<(), &str> {
         if !self.enable {
             return Err("dps is disable");
         }
@@ -129,7 +131,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
 
     //private
 
-    fn _send_mex(&'a self, mex: &CanMessage, err: &'a str) -> Result<(), &'a str>{
+    fn _send_mex(&self, mex: &CanMessage, err: &'a str) -> Result<(), &str>{
         let mut tries = 0;
         while (self.send_f)(mex).is_err() && tries < 32 {
             tries += 1;
@@ -141,7 +143,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         }
     }
 
-    fn _update_var_value(&'a mut self, master_mex: &DpsMasterMexModeM3) -> Result<(), &'a str> {
+    fn _update_var_value(&mut self, master_mex: &DpsMasterMexModeM3) -> Result<(), &str> {
         let val_slice = master_mex.value().to_le_bytes();
 
         if self.board_id != master_mex.var_value_board_id() {
@@ -165,7 +167,9 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
                 if let Some(var) = var 
                 {
                     let _ = var.ref_var.update(&val_slice);
-                    (var.post_update_f)(var.var_name, var.ref_var);
+                    var.post_update_f.inspect(
+                        |f| f(&var.var_name,var.ref_var)
+                    );
                     Ok(())
                 }else{
                     Err("variable not found")
@@ -177,7 +181,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
 
 
 
-    fn _request_var_value(&'a self, master_mex: &DpsMasterMexModeM2) -> Result<(), &'a str> {
+    fn _request_var_value(&self, master_mex: &DpsMasterMexModeM2) -> Result<(), &str> {
         if self.board_id != master_mex.var_refresh_board_id()
         {
             return Ok(());
@@ -213,7 +217,7 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         self._send_mex(&raw_mex, "failed send message for request var value")
     }
 
-    fn _request_info(&'a self, master_mex: &DpsMasterMexModeM1) -> Result<(), &'a str> {
+    fn _request_info(&self, master_mex: &DpsMasterMexModeM1) -> Result<(), &str> {
         if self.board_id != master_mex.var_name_board_id() {
             return Ok(());
         }
@@ -222,9 +226,10 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
             let mut slave_mex = DpsSlaveMex::new(self.board_id, 1).ok().unwrap();
             let mut slave_mode_1 = DpsSlaveMexModeM1::new();
             let mut slave_mode_2 = DpsSlaveMexModeM2::new();
+            let var_name = str::from_utf8(&var.var_name).unwrap();
 
             slave_mode_1.set_info_var_id(var.var_id).ok().unwrap();
-            slave_mode_1.set_var_name(str::parse(var.var_name).unwrap()).ok().unwrap();
+            slave_mode_1.set_var_name(str::parse(var_name).unwrap()).ok().unwrap();
             slave_mex.set_m1(slave_mode_1).ok().unwrap();
             let raw_mex = CanMessage {
                 id: self.slave_id,
@@ -250,10 +255,10 @@ impl<'a, const S: usize> DpsSlave<'a,S> {
         Ok(())
     }
 
-    fn _discover_board(&'a self) -> Result<(), &'a str> {
+    fn _discover_board(&self) -> Result<(), &str> {
         let mut slave_mex = DpsSlaveMex::new(self.board_id, 0).ok().unwrap();
         let mut slave_mode_0 = DpsSlaveMexModeM0::new();
-        slave_mode_0.set_board_name(str::parse(self.board_name).unwrap()).ok().unwrap();
+        slave_mode_0.set_board_name(str::parse(str::from_utf8(&self.board_name).unwrap()).unwrap()).ok().unwrap();
         slave_mex.set_m0(slave_mode_0).ok().unwrap();
 
         let raw_mex = CanMessage {
