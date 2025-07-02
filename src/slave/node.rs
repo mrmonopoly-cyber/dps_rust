@@ -37,8 +37,8 @@ impl<'a> DpsSlave<'a> {
         master_id: u16,
         slave_id: u16,
     ) -> Result<Self, &str> {
-        if board_name.len() > BOARD_NAME_LENGTH{
-            return Err("var name string too long ");
+        if board_name.len() +1 > BOARD_NAME_LENGTH{
+            return Err("var name string too long ")
         }
 
         let mut name_arr = [0;BOARD_NAME_LENGTH];
@@ -258,7 +258,14 @@ impl<'a> DpsSlave<'a> {
     fn _discover_board(&self) -> Result<(), &str> {
         let mut slave_mex = DpsSlaveMex::new(self.board_id, 0).ok().unwrap();
         let mut slave_mode_0 = DpsSlaveMexModeM0::new();
-        slave_mode_0.set_board_name(str::parse(str::from_utf8(&self.board_name).unwrap()).unwrap()).ok().unwrap();
+        let board_name = 
+        {
+            let mut temp = [0;8];
+            temp[..BOARD_NAME_LENGTH].copy_from_slice(&self.board_name);
+            u64::from_le_bytes(temp)
+        };
+
+        slave_mode_0.set_board_name(board_name).ok().unwrap();
         slave_mex.set_m0(slave_mode_0).ok().unwrap();
 
         let raw_mex = CanMessage {

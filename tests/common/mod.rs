@@ -10,6 +10,7 @@ pub fn send_f(mex:&CanMessage<'_>) -> Result<(), dps::common::messages::CanError
     let id = socketcan::StandardId::new(mex.id).unwrap();
     let frame = socketcan::frame::CanFrame::new(id, &mex.payload).unwrap();
     let res =can_node.write_frame(&frame);
+    println!("sending mex id: {}",mex.id);
     match res {
         Ok(_) => Ok(()),
         Err(_) => Err(dps::common::messages::CanError::InvalidPayloadSize),

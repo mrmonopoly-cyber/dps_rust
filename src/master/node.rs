@@ -40,7 +40,7 @@ pub struct DpsMaster<const SB: usize> {
     board_vec_cursor :usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BoardInfo<'a> {
     pub name: &'a str,
     pub id: u8,
@@ -98,7 +98,7 @@ impl<const SB:usize> DpsMaster<SB> {
                 name: core::str::from_utf8(&board.board_name).ok().unwrap(),
                 id: board.id,
             };
-            vec_board_res[cursor_res] = Some(board_info);
+            vec_board_res[cursor_res].replace(board_info);
         }
         vec_board_res
     }
@@ -270,7 +270,7 @@ impl<const SB:usize> DpsMaster<SB> {
         dps_slave_mex_mode_m0: &DpsSlaveMexModeM0,
     ) -> Result<bool, CanError> {
         let arr = dps_slave_mex_mode_m0.board_name().to_ne_bytes();
-        if self._find_board(board_id).is_none() {
+        if self._find_board(board_id).is_some() {
             return Ok(false);
         }
 
@@ -279,8 +279,9 @@ impl<const SB:usize> DpsMaster<SB> {
             board_name: arr[..BOARD_NAME_LENGTH].try_into().unwrap(),
             vars: [const {None};MAX_VAR_FOR_SLAVE],
         };
-        self.board_vec[self.board_vec_cursor].replace(new_board);
+        let cursor = self.board_vec_cursor;
         self.board_vec_cursor+=1;
+        self.board_vec[cursor].replace(new_board);
         Ok(true)
     }
 
